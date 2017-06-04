@@ -7,7 +7,6 @@ from six.moves.urllib.request import urlopen
 
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
-from django_cas.models import Tgt, PgtIOU
 from django_cas.utils import cas_response_callbacks
 from django.contrib.auth import get_user_model
 
@@ -135,18 +134,18 @@ class CASBackend(object):
             NB: Use of PT to identify proxy
         """
 
-        username = _verify(ticket, service)
+        email = _verify(ticket, service)
         user_model = get_user_model()
-        if not username:
+        if not email:
             return None
         try:
             if settings.CAS_USERNAME_FORMAT:
-                username = settings.CAS_USERNAME_FORMAT(username)
-            user = user_model.objects.get(username=username)
+                email = settings.CAS_USERNAME_FORMAT(email)
+            user = user_model.objects.get(username=email)
         except user_model.DoesNotExist:
             if settings.CAS_USER_CREATION:
                 # user will have an "unusable" password
-                user = user_model.objects.create_user(username, '')
+                user = user_model.objects.create_user(email, '')
                 user.save()
             else:
                 return None
