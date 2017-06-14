@@ -11,7 +11,7 @@ from django.contrib.auth import get_user_model
 __all__ = ['CASBackend']
 
 
-def _verify_cas1(ticket, service):
+def _verify_cas1(ticket, service, cas_url=None):
     """Verifies CAS 1.0 authentication ticket.
 
     Returns username on success and None on failure.
@@ -31,15 +31,15 @@ def _verify_cas1(ticket, service):
         page.close()
 
 
-def _verify_cas2(ticket, service, sufix='proxyValidate'):
-    return _internal_verify_cas(ticket, service, sufix)
+def _verify_cas2(ticket, service, cas_url=None, suffix='proxyValidate'):
+    return _internal_verify_cas(ticket, service, cas_url, suffix)
 
 
-def _verify_cas3(ticket, service, sufix='p3/proxyValidate'):
-    return _internal_verify_cas(ticket, service, sufix)
+def _verify_cas3(ticket, service, cas_url=None, suffix='p3/proxyValidate'):
+    return _internal_verify_cas(ticket, service, cas_url, suffix)
 
 
-def _internal_verify_cas(ticket, service, sufix):
+def _internal_verify_cas(ticket, service, cas_url, suffix):
     """Verifies CAS 2.0 and 3.0  XML-based authentication ticket.
 
     Returns username on success and None on failure.
@@ -55,7 +55,7 @@ def _internal_verify_cas(ticket, service, sufix):
     else:
         params = {'ticket': ticket, 'service': service}
 
-    url = (urljoin(settings.CAS_SERVER_URL, sufix) + '?' +
+    url = (urljoin(cas_url, suffix) + '?' +
            urlencode(params))
 
     page = urlopen(url)
@@ -126,23 +126,23 @@ class CASBackend(object):
     supports_object_permissions = False
     supports_inactive_user = False
 
-    def authenticate(self, ticket, service):
+    def authenticate(self, ticket, service, cas_url=None):
         """Verifies CAS ticket and gets or create User object
             NB: Use of PT to identify proxy
         """
 
-        email = _verify(ticket, service)
+        email = _verify(ticket, service, cas_url)
         user_model = get_user_model()
         if not email:
             return None
         try:
             if settings.CAS_USERNAME_FORMAT:
                 email = settings.CAS_USERNAME_FORMAT(email)
-            user = user_model.objects.get(username=email)
+            user = user_model.objects.get(email=email)
         except user_model.DoesNotExist:
             if settings.CAS_USER_CREATION:
                 # user will have an "unusable" password
-                user = user_model.objects.create_user(email, '')
+                user = user_model.objects.create_user(email, email, '')
                 user.save()
             else:
                 return None
