@@ -11,10 +11,8 @@ from operator import itemgetter
 from django.http import HttpResponseRedirect, HttpResponseForbidden, HttpResponse
 from django.conf import settings
 from django.contrib.auth import REDIRECT_FIELD_NAME
-from django_cas.models import PgtIOU
-from django.contrib import messages
+from .models import PgtIOU, SessionServiceTicket
 
-from django_cas.models import SessionServiceTicket
 
 __all__ = ['login', 'logout']
 
@@ -162,7 +160,7 @@ def _get_session(samlp):
         tree = ET.fromstring(samlp)
         if tree[1].tag.endswith('SessionIndex'):
             ticket = tree[1].text
-        sst = SessionServiceTicket.objects.get(pk=ticket)
+        sst = SessionServiceTicket.objects.filter(pk=ticket).first()
     except:
         return None
     return sst.get_session()

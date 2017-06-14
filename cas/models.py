@@ -1,6 +1,5 @@
 # -*- coding:utf-8 -*-
 
-from datetime import datetime
 from six.moves.urllib_parse import urlencode, urljoin
 from six.moves.urllib.request import urlopen
 
@@ -10,9 +9,8 @@ except ImportError:
     from elementtree import ElementTree
 # from six import urllib
 
-from django.db.models.signals import post_save
 from django.conf import settings
-from django_cas.exceptions import CasTicketException, CasConfigException
+from .exceptions import CasTicketException, CasConfigException
 # Ed Crewe - add in signals to delete old tickets
 # Single Sign Out
 from django.contrib.auth import BACKEND_SESSION_KEY
@@ -21,13 +19,9 @@ from django.contrib.sessions.backends.db import SessionStore
 from django.dispatch import receiver
 from redisco import models
 
-ObjectDoesNotExist = models.exceptions.Error
-
-# encoding: utf-8
-
 
 def _get_cas_backend():
-    from django_cas.backends import CASBackend
+    from .backends import CASBackend
     return '{0.__module__}.{0.__name__}'.format(CASBackend)
 
 
@@ -48,9 +42,8 @@ class Tgt(models.Model):
 
         params = {'pgt': self.tgt, 'targetService': service}
 
-        url = (
-            urljoin(settings.CAS_SERVER_URL, 'proxy') + '?' + urlencode(params)
-        )
+        url = (urljoin(settings.CAS_SERVER_URL, 'proxy') + '?' +
+               urlencode(params))
 
         page = urlopen(url)
 
@@ -76,23 +69,22 @@ def get_tgt_for(user):
     if not settings.CAS_PROXY_CALLBACK:
         raise CasConfigException("No proxy callback set in settings")
 
-    try:
-        return Tgt.objects.get(username=user.username)
-    except ObjectDoesNotExist:
+    tgt = Tgt.objects.filter(username=user.username).first()
+    if not tgt:
         raise CasTicketException("no ticket found for user " + user.username)
 
 
-def delete_old_tickets(**kwargs):
-    """ Delete tickets if they are over 2 days old
-        kwargs = ['raw', 'signal', 'instance', 'sender', 'created']
-    """
-    sender = kwargs.get('sender', None)
-    now = datetime.now()
-    expire = datetime(now.year, now.month, now.day - 2)
-    sender.objects.filter(created__lt=expire).delete()
+# def delete_old_tickets(**kwargs):
+# """ Delete tickets if they are over 2 days old
+# kwargs = ['raw', 'signal', 'instance', 'sender', 'created']
+# """
+# sender = kwargs.get('sender', None)
+# now = datetime.now()
+# expire = datetime(now.year, now.month, now.day - 2)
+# sender.objects.filter(created__lt=expire).delete()
 
-
-post_save.connect(delete_old_tickets, sender=PgtIOU)
+#TODO
+# post_save.connect(delete_old_tickets, sender=PgtIOU)
 
 
 class SessionServiceTicket(models.Model):
@@ -147,5 +139,6 @@ def delete_service_ticket(sender, **kwargs):
     request = kwargs['request']
     if _is_cas_backend(request.session):
         session_key = request.session.session_key
-        sst = SessionServiceTicket.objects.filter(session_key=session_key).first()
+        sst = SessionServiceTicket.objects.filter(
+            session_key=session_key).first()
         sst and sst.delete()

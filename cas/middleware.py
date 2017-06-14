@@ -11,8 +11,8 @@ from django.core.urlresolvers import reverse
 from django.http import HttpResponseRedirect, HttpResponseForbidden
 from django.core.exceptions import ImproperlyConfigured
 
-from django_cas.exceptions import CasTicketException
-from django_cas.views import login as cas_login, logout as cas_logout
+from .exceptions import CasTicketException
+from .views import login as cas_login, logout as cas_logout
 
 from . import admin_prefix_warning
 
@@ -100,7 +100,7 @@ class CASMiddleware(object):
                 return HttpResponseForbidden(error)
         params = urlencode({REDIRECT_FIELD_NAME: request.get_full_path()})
         return HttpResponseRedirect(
-            '{}?{}'.format(reverse('django_cas:login'), params)
+            '{}?{}'.format(reverse('cas:login'), params)
         )
 
     def process_exception(self, request, exception):

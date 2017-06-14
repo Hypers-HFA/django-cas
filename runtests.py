@@ -14,18 +14,18 @@ if not settings.configured:
             'django.contrib.contenttypes',
             'django.contrib.auth',
             'django.contrib.admin',
-            'django_cas',
+            'cas',
             'tests'
         ),
         MIDDLEWARE_CLASSES=(
             'django.middleware.common.CommonMiddleware',
             'django.contrib.sessions.middleware.SessionMiddleware',
             'django.contrib.auth.middleware.AuthenticationMiddleware',
-            'django_cas.middleware.CASMiddleware',
+            'cas.middleware.CASMiddleware',
         ),
         AUTHENTICATION_BACKENDS=(
             'django.contrib.auth.backends.ModelBackend',
-            'django_cas.backends.CASBackend'
+            'cas.backends.CASBackend'
         ),
         ROOT_URLCONF='tests.urls',
         USE_TZ=True,

@@ -1,5 +1,5 @@
 from django.conf.urls import url
-from django_cas.views import login, logout
+from cas.views import login, logout
 from . import views
 
 

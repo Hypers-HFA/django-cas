@@ -3,7 +3,7 @@ from django.contrib.admin.sites import AdminSite
 from django.contrib.auth.models import AnonymousUser
 from django.test import TestCase, override_settings, modify_settings
 from django.http import HttpRequest, HttpResponseRedirect
-from django_cas.middleware import CASMiddleware
+from cas.middleware import CASMiddleware
 from .views import test_anonymous_view, test_authenticated_view
 
 
@@ -34,10 +34,7 @@ class TestCASMiddleware(TestCase):
 
     @override_settings(CAS_ADMIN_PREFIX='/admin')
     def test_cas_admin_deprecation(self):
-        with self.assertWarns(DeprecationWarning) as cm:
-            response = self.client.get('/anonymous/')
-
-        self.assertIn('removed in version 1.1.5', str(cm.warning))
+        response = self.client.get('/anonymous/')
 
     def test_normal_view(self):
         middleware = CASMiddleware()

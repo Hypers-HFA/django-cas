@@ -1,6 +1,6 @@
 from django.test import TestCase, override_settings
 import warnings
-from django_cas import admin_prefix_warning
+from cas import admin_prefix_warning
 
 
 class TestCasAdminPrefixDeprecation(TestCase):
