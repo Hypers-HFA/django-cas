@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-
 """CAS login/logout replacement views"""
 from datetime import datetime
 # from urllib import urlencode
@@ -11,8 +10,8 @@ from operator import itemgetter
 from django.http import HttpResponseRedirect, HttpResponseForbidden, HttpResponse
 from django.conf import settings
 from django.contrib.auth import REDIRECT_FIELD_NAME
+from django.contrib.auth import logout as logouter
 from .models import PgtIOU, SessionServiceTicket
-
 
 __all__ = ['login', 'logout']
 
@@ -31,7 +30,8 @@ def _service_url(request, redirect_to=None, gateway=False):
             service += '?'
         if gateway:
             """ If gateway, capture params and reencode them before returning a url """
-            gateway_params = [(REDIRECT_FIELD_NAME, redirect_to), ('gatewayed','true')]
+            gateway_params = [(REDIRECT_FIELD_NAME, redirect_to), ('gatewayed',
+                                                                   'true')]
             query_dict = request.GET.copy()
             try:
                 del query_dict['ticket']
@@ -75,8 +75,7 @@ def _redirect_url(request):
 
 def _login_url(service, ticket='ST', gateway=False):
     """Generates CAS login URL"""
-    LOGINS = {'ST': 'login',
-              'PT': 'proxyValidate'}
+    LOGINS = {'ST': 'login', 'PT': 'proxyValidate'}
     if gateway:
         params = {'service': service, 'gateway': True}
     else:
@@ -87,7 +86,8 @@ def _login_url(service, ticket='ST', gateway=False):
         ticket = 'ST'
     login = LOGINS.get(ticket[:2], 'login')
 
-    return urlparse.urljoin(settings.CAS_SERVER_URL, login) + '?' + urlencode(params)
+    return urlparse.urljoin(settings.CAS_SERVER_URL,
+                            login) + '?' + urlencode(params)
 
 
 def _logout_url(request, next_page=None):
@@ -136,7 +136,9 @@ def login(request, next_page=None, required=False, gateway=False):
             #Has ticket, not session
             if getattr(settings, 'CAS_CUSTOM_FORBIDDEN'):
                 from django.core.urlresolvers import reverse
-                return HttpResponseRedirect(reverse(settings.CAS_CUSTOM_FORBIDDEN) + "?" + request.META['QUERY_STRING'] )
+                return HttpResponseRedirect(
+                    reverse(settings.CAS_CUSTOM_FORBIDDEN) + "?" +
+                    request.META['QUERY_STRING'])
             else:
                 error = "<h1>Forbidden</h1><p>Login failed.</p>"
                 return HttpResponseForbidden(error)
@@ -172,9 +174,7 @@ def logout(request, next_page=None):
     if cas_logout_request:
         session = _get_session(cas_logout_request)
         request.session = session
-
-    from django.contrib.auth import logout
-    logout(request)
+    logouter(request)
 
     if not next_page:
         next_page = _redirect_url(request)
@@ -200,8 +200,11 @@ def proxy_callback(request):
     try:
         PgtIOU.objects.create(tgt=tgt, pgtIou=pgtIou, created=datetime.now())
         request.session['pgt-TICKET'] = ticket
-        return HttpResponse('PGT ticket is: %s' % str(ticket, mimetype="text/plain"))
+        return HttpResponse(
+            'PGT ticket is: %s' % str(ticket, mimetype="text/plain"))
     except:
-        return HttpResponse('PGT storage failed for %s' % str(request.GET), mimetype="text/plain")
+        return HttpResponse(
+            'PGT storage failed for %s' % str(request.GET),
+            mimetype="text/plain")
 
     return HttpResponse('Success', mimetype="text/plain")

@@ -18,10 +18,12 @@ _DEFAULTS = {
     'CAS_GATEWAY': False,
     'CAS_PROXY_CALLBACK': None,
     'CAS_RESPONSE_CALLBACKS': None,
-    'CAS_CUSTOM_FORBIDDEN':None,
+    'CAS_CUSTOM_FORBIDDEN': None,
     'CAS_LOGOUT_REQUEST_ALLOWED': (),
     'CAS_USER_CREATION': True,
-    'CAS_USERNAME_FORMAT': None
+    'CAS_USERNAME_FORMAT': None,
+    'LOGIN_CALLBACK': None,
+    'LOGOUT_CALLBACK': None
 }
 
 for key, value in iteritems(_DEFAULTS):
@@ -41,6 +43,4 @@ def admin_prefix_warning():
             'The `CAS_ADMIN_PREFIX` is not working and will be '
             'removed in version 1.1.5. If you want to disable CAS '
             'authentication for django admin app, you should consider '
-            'the new `CAS_ADMIN_AUTH` setting',
-            DeprecationWarning
-        )
+            'the new `CAS_ADMIN_AUTH` setting', DeprecationWarning)

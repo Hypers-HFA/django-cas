@@ -7,7 +7,6 @@ from django.conf import settings
 from .utils import cas_response_callbacks
 from django.contrib.auth import get_user_model
 
-
 __all__ = ['CASBackend']
 
 
@@ -18,8 +17,8 @@ def _verify_cas1(ticket, service, cas_url=None):
     """
 
     params = {'ticket': ticket, 'service': service}
-    url = (urljoin(settings.CAS_SERVER_URL, 'validate') + '?' +
-           urlencode(params))
+    url = (
+        urljoin(settings.CAS_SERVER_URL, 'validate') + '?' + urlencode(params))
     page = urlopen(url)
     try:
         verified = page.readline().strip()
@@ -51,23 +50,26 @@ def _internal_verify_cas(ticket, service, cas_url, suffix):
         from elementtree import ElementTree
 
     if settings.CAS_PROXY_CALLBACK:
-        params = {'ticket': ticket, 'service': service, 'pgtUrl': settings.CAS_PROXY_CALLBACK}
+        params = {
+            'ticket': ticket,
+            'service': service,
+            'pgtUrl': settings.CAS_PROXY_CALLBACK
+        }
     else:
         params = {'ticket': ticket, 'service': service}
 
-    url = (urljoin(cas_url, suffix) + '?' +
-           urlencode(params))
+    url = (urljoin(cas_url, suffix) + '?' + urlencode(params))
 
     page = urlopen(url)
     try:
         response = page.read()
         tree = ElementTree.fromstring(response)
 
-        #Useful for debugging
-        #from xml.dom.minidom import parseString
-        #from xml.etree import ElementTree
-        #txt = ElementTree.tostring(tree)
-        #print parseString(txt).toprettyxml()
+        # Useful for debugging
+        # from xml.dom.minidom import parseString
+        # from xml.etree import ElementTree
+        # txt = ElementTree.tostring(tree)
+        # print parseString(txt).toprettyxml()
 
         if tree[0].tag.endswith('authenticationSuccess'):
             if settings.CAS_RESPONSE_CALLBACKS:
@@ -111,6 +113,7 @@ def verify_proxy_ticket(ticket, service):
             return None
     finally:
         page.close()
+
 
 _PROTOCOLS = {'1': _verify_cas1, '2': _verify_cas2, '3': _verify_cas3}
 

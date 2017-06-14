@@ -4,7 +4,7 @@ def cas_response_callbacks(tree):
     callbacks.extend(settings.CAS_RESPONSE_CALLBACKS)
     for path in callbacks:
         i = path.rfind('.')
-        module, callback = path[:i], path[i+1:]
+        module, callback = path[:i], path[i + 1:]
         try:
             mod = __import__(module, fromlist=[''])
         except ImportError as e:

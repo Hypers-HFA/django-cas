@@ -3,10 +3,10 @@
 # from urllib import urlencode
 from six.moves.urllib_parse import urlencode
 
+from django.utils.module_loading import import_string
 from django.conf import settings
 from django.contrib.auth import REDIRECT_FIELD_NAME
 from django.contrib.auth import logout as do_logout
-from django.contrib.auth.views import login, logout
 from django.core.urlresolvers import reverse
 from django.http import HttpResponseRedirect, HttpResponseForbidden
 from django.core.exceptions import ImproperlyConfigured
@@ -15,7 +15,6 @@ from .exceptions import CasTicketException
 from .views import login as cas_login, logout as cas_logout
 
 from . import admin_prefix_warning
-
 
 __all__ = ['CASMiddleware']
 
@@ -27,6 +26,20 @@ def get_client_ip(request):
     else:
         ip = request.META.get('REMOTE_ADDR')
     return ip
+
+
+login = settings.LOGIN_CALLBACK
+logout = settings.LOGOUT_CALLBACK
+
+if not login:
+    from django.contrib.auth.views import login
+else:
+    import_string(login)
+
+if not logout:
+    from django.contrib.auth.views import logout
+else:
+    import_string(logout)
 
 
 def cas_request_logout_allowed(request):
@@ -67,7 +80,7 @@ class CASMiddleware(object):
         logout.
         """
         if view_func in (login, cas_login) and request.POST.get(
-            'logoutRequest', ''):
+                'logoutRequest', ''):
             if cas_request_logout_allowed(request):
                 return cas_logout(request, *view_args, **view_kwargs)
             return HttpResponseForbidden()
@@ -90,7 +103,6 @@ class CASMiddleware(object):
         if not (self._is_an_admin_view(view_func) and settings.CAS_ADMIN_AUTH):
             return None
 
-
         if request.user.is_authenticated():
             if request.user.is_staff:
                 return None
@@ -100,8 +112,7 @@ class CASMiddleware(object):
                 return HttpResponseForbidden(error)
         params = urlencode({REDIRECT_FIELD_NAME: request.get_full_path()})
         return HttpResponseRedirect(
-            '{}?{}'.format(reverse('cas:login'), params)
-        )
+            '{}?{}'.format(reverse('cas:login'), params))
 
     def process_exception(self, request, exception):
         """When we get a CasTicketException, that is probably caused by the ticket timing out.
@@ -120,6 +131,7 @@ class ProxyMiddleware(object):
     def process_request(self, request):
         proxy = getattr(settings, 'PROXY_DOMAIN', None)
         if not proxy:
-            raise ImproperlyConfigured('To use Proxy Middleware you must set a PROXY_DOMAIN setting.')
+            raise ImproperlyConfigured(
+                'To use Proxy Middleware you must set a PROXY_DOMAIN setting.')
         else:
             request.META['HTTP_HOST'] = proxy
