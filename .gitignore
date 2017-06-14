@@ -12,6 +12,8 @@ var
 sdist
 develop-eggs
 .installed.cfg
+*egg-fino
+
 
 # Installer logs
 pip-log.txt
