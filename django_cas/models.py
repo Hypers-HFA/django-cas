@@ -19,14 +19,19 @@ from django.contrib.auth import BACKEND_SESSION_KEY
 from django.contrib.auth.signals import user_logged_out, user_logged_in
 from django.contrib.sessions.backends.db import SessionStore
 from django.dispatch import receiver
-from django_cas.backends import CASBackend
-from redisco import models, exceptions
+from redisco import models
 
-ObjectDoesNotExist = exceptions.Error
+ObjectDoesNotExist = models.exceptions.Error
 
 # encoding: utf-8
 
-cas_backend = '{0.__module__}.{0.__name__}'.format(CASBackend)
+
+def _get_cas_backend():
+    from django_cas.backends import CASBackend
+    return '{0.__module__}.{0.__name__}'.format(CASBackend)
+
+
+cas_backend = _get_cas_backend()
 
 
 class Tgt(models.Model):
@@ -43,8 +48,9 @@ class Tgt(models.Model):
 
         params = {'pgt': self.tgt, 'targetService': service}
 
-        url = (urljoin(settings.CAS_SERVER_URL, 'proxy') + '?' +
-               urlencode(params))
+        url = (
+            urljoin(settings.CAS_SERVER_URL, 'proxy') + '?' + urlencode(params)
+        )
 
         page = urlopen(url)
 
@@ -90,7 +96,8 @@ post_save.connect(delete_old_tickets, sender=PgtIOU)
 
 
 class SessionServiceTicket(models.Model):
-    service_ticket = models.CharField('service ticket', required=True, unique=True)
+    service_ticket = models.CharField(
+        'service ticket', required=True, unique=True)
     session_key = models.CharField('session key')
     user = models.IntegerField()
 
@@ -100,10 +107,10 @@ class SessionServiceTicket(models.Model):
     __repr__ = __str__
 
     #  def get_session(self):
-        #  """ Searches the session in store and returns it """
-        #  session_engine = __import__(name=settings.SESSION_ENGINE, fromlist=['SessionStore'])
-        #  SessionStore = getattr(session_engine, 'SessionStore')
-        #  return SessionStore(session_key=self.session_key)
+    #  """ Searches the session in store and returns it """
+    #  session_engine = __import__(name=settings.SESSION_ENGINE, fromlist=['SessionStore'])
+    #  SessionStore = getattr(session_engine, 'SessionStore')
+    #  return SessionStore(session_key=self.session_key)
 
     def get_session(self):
         """ Searches the session in store and returns it """
@@ -127,9 +134,10 @@ def map_service_ticket(sender, **kwargs):
     ticket = request.GET.get('ticket')
     if ticket and _is_cas_backend(request.session):
         session_key = request.session.session_key
-        SessionServiceTicket.objects.create(service_ticket=ticket,
-                                            user=request.user.id,
-                                            session_key=session_key)
+        SessionServiceTicket.objects.create(
+            service_ticket=ticket,
+            user=request.user.id,
+            session_key=session_key)
 
 
 @receiver(user_logged_out)
@@ -139,7 +147,5 @@ def delete_service_ticket(sender, **kwargs):
     request = kwargs['request']
     if _is_cas_backend(request.session):
         session_key = request.session.session_key
-        ssts = SessionServiceTicket.objects.filter(session_key=session_key)
-        # redisco no bulk delete
-        for sst in ssts:
-            sst.delete()
+        sst = SessionServiceTicket.objects.filter(session_key=session_key).first()
+        sst and sst.delete()
