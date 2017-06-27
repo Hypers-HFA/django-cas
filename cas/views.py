@@ -16,12 +16,15 @@ from .models import PgtIOU, SessionServiceTicket
 __all__ = ['login', 'logout']
 
 
+def is_secure(request):
+    return getattr(settings, 'is_secure', request.is_secure())
+
+
 def _service_url(request, redirect_to=None, gateway=False):
     """Generates application service URL for CAS"""
-
-    protocol = ('http://', 'https://')[request.is_secure()]
+    protocol = ('http://', 'https://')[is_secure(request)]
     host = request.get_host()
-    prefix = (('http://', 'https://')[request.is_secure()] + host)
+    prefix = (('http://', 'https://')[is_secure(request)] + host)
     service = protocol + host + request.path
     if redirect_to:
         if '?' in service:
@@ -67,7 +70,7 @@ def _redirect_url(request):
             next = request.META.get('HTTP_REFERER', settings.CAS_REDIRECT_URL)
 
         host = request.get_host()
-        prefix = (('http://', 'https://')[request.is_secure()] + host)
+        prefix = (('http://', 'https://')[is_secure(request)] + host)
         if next.startswith(prefix):
             next = next[len(prefix):]
     return next
@@ -95,7 +98,7 @@ def _logout_url(request, next_page=None):
 
     url = urlparse.urljoin(settings.CAS_SERVER_URL, 'logout')
     if next_page:
-        protocol = ('http://', 'https://')[request.is_secure()]
+        protocol = ('http://', 'https://')[is_secure(request)]
         host = request.get_host()
         url += '?' + urlencode({'url': protocol + host + next_page})
     return url
