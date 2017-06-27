@@ -17,7 +17,7 @@ __all__ = ['login', 'logout']
 
 
 def is_secure(request):
-    return getattr(settings, 'is_secure', request.is_secure())
+    return getattr(settings, 'IS_SECURE', request.is_secure())
 
 
 def _service_url(request, redirect_to=None, gateway=False):
