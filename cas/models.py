@@ -15,9 +15,12 @@ from .exceptions import CasTicketException, CasConfigException
 # Single Sign Out
 from django.contrib.auth import BACKEND_SESSION_KEY
 from django.contrib.auth.signals import user_logged_out, user_logged_in
-from django.contrib.sessions.backends.db import SessionStore
 from django.dispatch import receiver
 from redisco import models
+from importlib import import_module
+
+session_engine = import_module(settings.SESSION_ENGINE)
+SessionStore = session_engine.SessionStore
 
 
 def _get_cas_backend():
@@ -98,12 +101,6 @@ class SessionServiceTicket(models.Model):
 
     __repr__ = __str__
 
-    #  def get_session(self):
-    #  """ Searches the session in store and returns it """
-    #  session_engine = __import__(name=settings.SESSION_ENGINE, fromlist=['SessionStore'])
-    #  SessionStore = getattr(session_engine, 'SessionStore')
-    #  return SessionStore(session_key=self.session_key)
-
     def get_session(self):
         """ Searches the session in store and returns it """
         sst = SessionStore(session_key=self.session_key)
@@ -142,3 +139,4 @@ def delete_service_ticket(sender, **kwargs):
         sst = SessionServiceTicket.objects.filter(
             session_key=session_key).first()
         sst and sst.delete()
+
