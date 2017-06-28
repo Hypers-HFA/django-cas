@@ -1,4 +1,4 @@
-# django-cas-sso
+# cas
 
 [![Code Health](https://landscape.io/github/unistra/django-cas/master/landscape.svg?style=flat)](https://landscape.io/github/unistra/django-cas/master)
    

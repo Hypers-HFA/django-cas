@@ -1,7 +1,7 @@
 import os
 from setuptools import setup, find_packages
 
-version = '1.1.6'
+version = '1.1.7'
 
 
 def recursive_requirements(requirement_file, libs, links, path=''):
@@ -50,7 +50,6 @@ setup(
     maintainer='di-dip-unistra',
     maintainer_email='di-dip@unistra.fr',
     url='https://github.com/drinksober/django-cas/',
-    download_url='http://pypi.python.org/pypi/django-cas-sso',
     license='MIT',
     entry_points={},
     packages=find_packages(),
