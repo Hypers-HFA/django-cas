@@ -2,6 +2,7 @@
 """CAS login/logout replacement views"""
 from datetime import datetime
 # from urllib import urlencode
+import logging
 from six.moves.urllib_parse import urlencode
 from six.moves import urllib_parse as urlparse
 
@@ -14,6 +15,7 @@ from django.contrib.auth import logout as logouter
 from .models import PgtIOU, SessionServiceTicket
 
 __all__ = ['login', 'logout']
+logger = logging.getLogger('cas')
 
 
 def is_secure(request):
@@ -161,12 +163,12 @@ def _get_session(samlp):
     except ImportError:
         from elementtree import ElementTree as ET
 
-    try:
-        tree = ET.fromstring(samlp)
-        if tree[1].tag.endswith('SessionIndex'):
-            ticket = tree[1].text
-        sst = SessionServiceTicket.objects.filter(service_ticket=ticket).first()
-    except:
+    tree = ET.fromstring(samlp)
+    if tree[1].tag.endswith('SessionIndex'):
+        ticket = tree[1].text
+    sst = SessionServiceTicket.objects.filter(service_ticket=ticket).first()
+    if not sst:
+        logger.error('cant find sst for ticket %s' % ticket)
         return None
     return sst.get_session()
 
