@@ -166,7 +166,7 @@ def _get_session(samlp):
     tree = ET.fromstring(samlp)
     if tree[1].tag.endswith('SessionIndex'):
         ticket = tree[1].text
-    sst = SessionServiceTicket.objects.filter(service_ticket=ticket).first()
+    sst = SessionServiceTicket.get_by_id(ticket)
     if not sst:
         logger.error('cant find sst for ticket %s' % ticket)
         return None

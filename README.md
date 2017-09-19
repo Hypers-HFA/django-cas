@@ -113,4 +113,3 @@ a generic ``HttpResponseForbidden`` will be returned.
 
 This fork also includes Edmund Crewe's proxy ticket patch:
 http://code.google.com/r/edmundcrewe-proxypatch/source/browse/django-cas-proxy.patch
-

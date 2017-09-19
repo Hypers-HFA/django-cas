@@ -1,26 +1,30 @@
 # -*- coding:utf-8 -*-
+from __future__ import unicode_literals
 
-from six.moves.urllib_parse import urlencode, urljoin
-from six.moves.urllib.request import urlopen
+from six.moves.urllib_parse import urlparse
+from importlib import import_module
+import logging
 
-try:
-    from xml.etree import ElementTree
-except ImportError:
-    from elementtree import ElementTree
-# from six import urllib
-
+import redis
 from django.conf import settings
-from .exceptions import CasTicketException, CasConfigException
+from django.db import models
 # Ed Crewe - add in signals to delete old tickets
 # Single Sign Out
 from django.contrib.auth import BACKEND_SESSION_KEY
 from django.contrib.auth.signals import user_logged_out, user_logged_in
 from django.dispatch import receiver
-from redisco import models
-from importlib import import_module
+
+logger = logging.getLogger('cas')
 
 session_engine = import_module(settings.SESSION_ENGINE)
 SessionStore = session_engine.SessionStore
+
+url = urlparse(settings.REDIS_HOST)
+db = url.path.strip('/') or 1
+host = url.netloc.split(':')[0]  # redis://10.100.196.104:6379/1
+port = url.netloc.split(':')[-1]
+port = port.isdigit() and port or '6379'
+pool = redis.ConnectionPool(host=host, port=port, db=db)
 
 
 def _get_cas_backend():
@@ -31,81 +35,76 @@ def _get_cas_backend():
 cas_backend = _get_cas_backend()
 
 
-class Tgt(models.Model):
-    username = models.CharField(unique=True)
-    tgt = models.CharField()
-
-    def get_proxy_ticket_for(self, service):
-        """Verifies CAS 2.0+ XML-based authentication ticket.
-
-        Returns username on success and None on failure.
-        """
-        if not settings.CAS_PROXY_CALLBACK:
-            raise CasConfigException("No proxy callback set in settings")
-
-        params = {'pgt': self.tgt, 'targetService': service}
-
-        url = (urljoin(settings.CAS_SERVER_URL, 'proxy') + '?' +
-               urlencode(params))
-
-        page = urlopen(url)
-
-        try:
-            response = page.read()
-            tree = ElementTree.fromstring(response)
-            if tree[0].tag.endswith('proxySuccess'):
-                return tree[0][0].text
-            else:
-                raise CasTicketException("Failed to get proxy ticket")
-        finally:
-            page.close()
-
-
 class PgtIOU(models.Model):
     """ Proxy granting ticket and IOU """
-    pgtIou = models.CharField(unique=True)
-    tgt = models.CharField()
+    pgtIou = models.CharField(max_length=255)
+    tgt = models.CharField(max_length=255)
     created = models.DateTimeField(auto_now=True)
 
 
-def get_tgt_for(user):
-    if not settings.CAS_PROXY_CALLBACK:
-        raise CasConfigException("No proxy callback set in settings")
+class SessionServiceTicket(object):
+    r = redis.Redis(connection_pool=pool)
 
-    tgt = Tgt.objects.filter(username=user.username).first()
-    if not tgt:
-        raise CasTicketException("no ticket found for user " + user.username)
+    service_ticket = ''
+    session_key = ''
+    user = 0
 
+    def __init__(self, user=None, service_ticket=None, session_key=None):
+        if user:
+            self.user = user
+        if service_ticket:
+            self.service_ticket = service_ticket
+        if session_key:
+            self.session_key = session_key
 
-# def delete_old_tickets(**kwargs):
-# """ Delete tickets if they are over 2 days old
-# kwargs = ['raw', 'signal', 'instance', 'sender', 'created']
-# """
-# sender = kwargs.get('sender', None)
-# now = datetime.now()
-# expire = datetime(now.year, now.month, now.day - 2)
-# sender.objects.filter(created__lt=expire).delete()
+    @property
+    def pk(self):
+        key = ':'.join((self.__class__.__name__, self.service_ticket))
+        return key
 
-#TODO
-# post_save.connect(delete_old_tickets, sender=PgtIOU)
+    @classmethod
+    def create(cls, user=None, service_ticket=None, session_key=None):
+        data = dict(
+            user=user, session_key=session_key, service_ticket=service_ticket)
+        obj = cls(**data)
+        try:
+            cls.r.hmset(obj.pk, data)
+        except Exception:
+            from traceback import format_exc
+            logger.error(format_exc())
+            pass
+        return obj
 
+    @classmethod
+    def get_by_id(cls, key):
+        key = ':'.join((cls.__name__, key))
+        try:
+            data = cls.r.hgetall(key)
+        except Exception:
+            from traceback import format_exc
+            logger.error(format_exc())
+            return None
+        return cls(**data)
 
-class SessionServiceTicket(models.Model):
-    service_ticket = models.CharField(
-        'service ticket', required=True, unique=True)
-    session_key = models.CharField('session key')
-    user = models.IntegerField()
-
-    def __str__(self):
-        return self.service_ticket
-
-    __repr__ = __str__
+    def delete(self):
+        key = ':'.join((self.__class__.__name__, self.service_ticket))
+        try:
+            self.r.delete(key)
+        except Exception:
+            from traceback import format_exc
+            logger.error(format_exc())
+        return self
 
     def get_session(self):
         """ Searches the session in store and returns it """
         sst = SessionStore(session_key=self.session_key)
         sst[BACKEND_SESSION_KEY] = cas_backend
         return sst
+
+    def __str__(self):
+        return '<{}: {}>'.format(self.user, self.service_ticket)
+
+    __repr__ = __str__
 
 
 def _is_cas_backend(session):
@@ -123,10 +122,11 @@ def map_service_ticket(sender, **kwargs):
     ticket = request.GET.get('ticket')
     if ticket and _is_cas_backend(request.session):
         session_key = request.session.session_key
-        SessionServiceTicket.objects.create(
+        sst = SessionServiceTicket.create(
             service_ticket=ticket,
             user=request.user.id,
             session_key=session_key)
+        sst.r.expire(sst.pk, 60 * 60 * 24 * 2)
 
 
 @receiver(user_logged_out)
@@ -136,7 +136,5 @@ def delete_service_ticket(sender, **kwargs):
     request = kwargs['request']
     if _is_cas_backend(request.session):
         session_key = request.session.session_key
-        sst = SessionServiceTicket.objects.filter(
-            session_key=session_key).first()
+        sst = SessionServiceTicket.get_by_id(session_key)
         sst and sst.delete()
-
