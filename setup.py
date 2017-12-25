@@ -1,7 +1,7 @@
 import os
 from setuptools import setup, find_packages
 
-version = '1.1.10'
+version = '1.1.11'
 
 
 def recursive_requirements(requirement_file, libs, links, path=''):
@@ -48,7 +48,7 @@ setup(
     author='drinksober',
     author_email='drinksober@foxmail.com',
     maintainer='drinksober',
-    maintainer_email='drinksober@foxmail.com'
+    maintainer_email='drinksober@foxmail.com',
     url='https://github.com/Hypers-HFA/django-cas/',
     license='MIT',
     entry_points={},
