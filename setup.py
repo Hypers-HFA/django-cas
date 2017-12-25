@@ -1,7 +1,7 @@
 import os
 from setuptools import setup, find_packages
 
-version = '1.1.9'
+version = '1.1.10'
 
 
 def recursive_requirements(requirement_file, libs, links, path=''):
@@ -31,7 +31,7 @@ setup(
     version=version,
     install_requires=libraries,
     dependency_links=dependency_links,
-    description="Django Cas SSO Client (inherited from django-cas)",
+    description="Django Cas Client (inherited from django-cas)",
     long_description=open("./README.md", "r").read(),
     classifiers=[
         "Development Status :: 5 - Production/Stable",
@@ -44,12 +44,12 @@ setup(
         "Topic :: Utilities",
         "License :: OSI Approved :: BSD License",
     ],
-    keywords=['django', 'cas', 'sso'],
+    keywords=['django', 'cas'],
     author='drinksober',
     author_email='drinksober@foxmail.com',
-    maintainer='di-dip-unistra',
-    maintainer_email='di-dip@unistra.fr',
-    url='https://github.com/drinksober/django-cas/',
+    maintainer='drinksober',
+    maintainer_email='drinksober@foxmail.com'
+    url='https://github.com/Hypers-HFA/django-cas/',
     license='MIT',
     entry_points={},
     packages=find_packages(),
