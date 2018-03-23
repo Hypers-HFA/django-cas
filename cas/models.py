@@ -59,7 +59,7 @@ class SessionServiceTicket(object):
 
     @property
     def pk(self):
-        key = ':'.join((self.__class__.__name__, self.service_ticket))
+        key = ':'.join((self.__class__.__name__, self.user))
         return key
 
     @classmethod
@@ -124,7 +124,7 @@ def map_service_ticket(sender, **kwargs):
         session_key = request.session.session_key
         sst = SessionServiceTicket.create(
             service_ticket=ticket,
-            user=request.user.id,
+            user=request.user.email,
             session_key=session_key)
         sst.r.expire(sst.pk, 60 * 60 * 24 * 2)
 
@@ -135,6 +135,6 @@ def delete_service_ticket(sender, **kwargs):
         logged out """
     request = kwargs['request']
     if _is_cas_backend(request.session):
-        session_key = request.session.session_key
-        sst = SessionServiceTicket.get_by_id(session_key)
+        email = request.user.email
+        sst = SessionServiceTicket.get_by_id(email)
         sst and sst.delete()
