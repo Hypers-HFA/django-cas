@@ -3,6 +3,7 @@
 from six.moves.urllib_parse import urlencode, urljoin
 from six.moves.urllib.request import urlopen
 
+import requests
 from django.conf import settings
 from .utils import cas_response_callbacks
 from django.contrib.auth import get_user_model
@@ -60,25 +61,15 @@ def _internal_verify_cas(ticket, service, cas_url, suffix):
 
     url = (urljoin(cas_url, suffix) + '?' + urlencode(params))
 
-    page = urlopen(url)
-    try:
-        response = page.read()
-        tree = ElementTree.fromstring(response)
+    response = requests.get(url, verify=False).text
+    tree = ElementTree.fromstring(response)
 
-        # Useful for debugging
-        # from xml.dom.minidom import parseString
-        # from xml.etree import ElementTree
-        # txt = ElementTree.tostring(tree)
-        # print parseString(txt).toprettyxml()
-
-        if tree[0].tag.endswith('authenticationSuccess'):
-            if settings.CAS_RESPONSE_CALLBACKS:
-                cas_response_callbacks(tree)
-            return tree[0][0].text
-        else:
-            return None
-    finally:
-        page.close()
+    if tree[0].tag.endswith('authenticationSuccess'):
+        if settings.CAS_RESPONSE_CALLBACKS:
+            cas_response_callbacks(tree)
+        return tree[0][0].text
+    else:
+        return None
 
 
 def verify_proxy_ticket(ticket, service):
